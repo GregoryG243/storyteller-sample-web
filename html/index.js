@@ -1,7 +1,14 @@
+
 (function () {
   // Replace this with your own API key. You can reach out to hello@getstoryteller.com
   // to obtain an API key.
-  const API_KEY = 'd5055df5-7265-43e1-91ac-d8a26b51b29d';
+
+  const API_KEY = window.STORYTELLER_API_KEY;
+
+  if (!API_KEY) {
+    console.error('API key is missing. Please set the STORYTELLER_API_KEY environment variable.');
+    return;
+  }
 
   let storyRow;
   let topStoryRow;
