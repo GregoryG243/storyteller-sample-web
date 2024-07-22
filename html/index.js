@@ -1,7 +1,7 @@
 (function () {
   // Replace this with your own API key. You can reach out to hello@getstoryteller.com
   // to obtain an API key.
-  const API_KEY = 'f8d7c0a4-113d-40b7-b446-ca29d5eb1268';
+  const API_KEY = 'd5055df5-7265-43e1-91ac-d8a26b51b29d';
 
   let storyRow;
   let topStoryRow;
@@ -27,7 +27,7 @@
         // For more information on the events and associated data, please see:
         // https://www.getstoryteller.com/documentation/web/analytics
         onUserActivityOccurred: (type, data) =>
-          console.log('Storyteller Activity Occurred', type, data),
+          handleStorytellerEvent(type, data),
       };
     });
   });
@@ -46,7 +46,7 @@
     // For more information on the various delegate callbacks, please see
     // https://www.getstoryteller.com/documentation/web/storyteller-list-view-delegate
     storyRow = new Storyteller.StorytellerStoriesRowView('default-stories', [
-      'game-stories',
+      'eurosport-top-stories',
     ]);
     storyRow.delegate = {
       // This function is called when the Story data has been loaded from our API
@@ -61,7 +61,7 @@
     };
 
     topStoryRow = new Storyteller.StorytellerStoriesRowView('top-stories-row', [
-      'top-stories',
+      'olympics-top-stories',
     ]);
     topStoryRow.delegate = {
       onDataLoadComplete: (success, error, dataCount) => {
@@ -72,7 +72,7 @@
     };
 
     storyGrid = new Storyteller.StorytellerStoriesGridView('stories-grid', [
-      'trending-content',
+      'olympics-top-stories',
     ]);
 
     // This method creates a new Clips row, replacing the div with id "clips-row"
@@ -86,12 +86,12 @@
 
     clipsRow = new Storyteller.StorytellerClipsRowView(
       'clips-row',
-      'game-clips',
+      'eurosport-clips',
     );
 
     clipsGrid = new Storyteller.StorytellerClipsGridView(
       'clips-grid',
-      'top-clips',
+      'eurosport-clips',
     );
   }
 })();
@@ -108,3 +108,81 @@ function ready(fn) {
     document.addEventListener('DOMContentLoaded', fn);
   }
 }
+
+function handleStorytellerEvent(type, data) {
+  // Define the mapping of event types to their categories and metadata structure
+  const eventTypes = {
+    story: ['openedStory', 'completedStory', 'openedPage', 'completedPage', 'actionButtonTapped', 'shareButtonTapped', 'dismissedStory'],
+    clips: ['openedStory', 'completedStory', 'openedPage', 'completedPage', 'actionButtonTapped', 'shareButtonTapped', 'dismissedStory'],
+    // poll: ['pollStarted', 'pollCompleted'], // Example future event types
+    // ad: ['adStarted', 'adCompleted'],       // Example future event types
+    // quiz: ['quizStarted', 'quizCompleted']  // Example future event types
+  };
+
+  // Function to get the category of an event type
+  function getEventCategory(eventType) {
+    for (const category in eventTypes) {
+      if (eventTypes[category].includes(eventType)) {
+        return category;
+      }
+    }
+    return null;
+  }
+
+  // Check if the event type is in scope
+  const eventCategory = getEventCategory(type);
+  if (eventCategory) {
+    // Initialize window.dataLayer if it's not already defined
+    window.dataLayer = window.dataLayer || [];
+
+    // Prepare the common event data structure
+    const payload = {
+      event: 'storytellerEvent',
+      eventData: {
+        eventType: eventCategory,
+        eventName: type
+      }
+    };
+
+    // Add the story specific metadata if the event is a storyteller story event
+    if (eventCategory === 'story') {
+      payload.storyteller = {
+        categories: data.categories,
+        categoryDetails: data.categoryDetails,
+        currentCategory: data.currentCategory,
+        openedReason: data.openedReason,
+        dismissedReason: data.dismissedReason,
+        pageId: data.pageId,
+        pageIndex: data.pageIndex,
+        pageType: data.pageType,
+        storyId: data.storyId,
+        storyIndex: data.storyIndex,
+        storyPageCount: data.storyPageCount,
+        storyPlaybackMode: data.storyPlaybackMode,
+        storyReadStatus: data.storyReadStatus,
+        storyTitle: data.storyTitle,
+        storyDisplayTitle: data.storyDisplayTitle,
+        contentLength: data.contentLength,
+        pageActionText: data.pageActionText,
+        pageActionUrl: data.pageActionUrl,
+        pageHasAction: data.pageHasAction
+      };
+    }
+
+    // Add additional logic for other categories (poll, ad, quiz) here in the future
+    // Example:
+    // if (eventCategory === 'poll') {
+    //   payload.poll = {
+    //     pollId: data.pollId,
+    //     pollQuestion: data.pollQuestion,
+    //     pollOptions: data.pollOptions,
+    //     selectedOption: data.selectedOption
+    //   };
+    // }
+
+    // Push the event data to the dataLayer
+    window.dataLayer.push(payload);
+  }
+}
+
+
