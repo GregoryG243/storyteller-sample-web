@@ -110,79 +110,112 @@ function ready(fn) {
 }
 
 function handleStorytellerEvent(type, data) {
-  // Define the mapping of event types to their categories and metadata structure
-  const eventTypes = {
-    story: ['openedStory', 'completedStory', 'openedPage', 'completedPage', 'actionButtonTapped', 'shareButtonTapped', 'dismissedStory'],
-    clips: ['openedStory', 'completedStory', 'openedPage', 'completedPage', 'actionButtonTapped', 'shareButtonTapped', 'dismissedStory'],
-    // poll: ['pollStarted', 'pollCompleted'], // Example future event types
-    // ad: ['adStarted', 'adCompleted'],       // Example future event types
-    // quiz: ['quizStarted', 'quizCompleted']  // Example future event types
+  // Define the mapping of event types to their categories
+  const eventCategoryMap = {
+    openedStory: 'story',
+    completedStory: 'story',
+    openedPage: 'story',
+    completedPage: 'story',
+    actionButtonTapped: null, // To be determined based on data
+    shareButtonTapped: null, // To be determined based on data
+    dismissedStory: 'story',
+    openedClip: 'clip',
+    completedLoop: 'clip',
+    finishedClip: 'clip',
+    dismissedClip: 'clip',
+    likedClip: 'clip',
+    unlikedClip: 'clip',
   };
 
-  // Function to get the category of an event type
-  function getEventCategory(eventType) {
-    for (const category in eventTypes) {
-      if (eventTypes[category].includes(eventType)) {
-        return category;
+  // Function to determine the category for events that can belong to both clip and story
+  function determineCategory(type, data) {
+    const category = eventCategoryMap[type];
+    if (category === null) {
+      // Check for properties that are unique to clips or stories
+      if (data.clipId !== undefined) {
+        return 'clip';
+      } else if (data.storyId !== undefined) {
+        return 'story';
       }
     }
-    return null;
+    return category;
   }
 
-  // Check if the event type is in scope
-  const eventCategory = getEventCategory(type);
+  // Function to prepare the event payload
+  function preparePayload(eventType, eventName, eventMetadata) {
+    // Filter out undefined values
+    const filteredMetadata = Object.fromEntries(
+      Object.entries(eventMetadata).filter(([_, value]) => value !== undefined),
+    );
+
+    return {
+      event: 'storyteller',
+      eventData: { eventType, eventName },
+      storyteller: filteredMetadata,
+    };
+  }
+
+  // Define storyteller specific metadata for stories and clips
+  const storytellerMetadata = {
+    story: {
+      categories: data.categories,
+      categoryDetails: data.categoryDetails,
+      contentLength: data.contentLength,
+      currentCategory: data.currentCategory,
+      dismissedReason: data.dismissedReason,
+      durationViewed: data.durationViewed,
+      openedReason: data.openedReason,
+      pageActionText: data.pageActionText,
+      pageActionUrl: data.pageActionUrl,
+      pageHasAction: data.pageHasAction,
+      pageId: data.pageId,
+      pageIndex: data.pageIndex,
+      pageTitle: data.pageTitle,
+      pageType: data.pageType,
+      storyDisplayTitle: data.storyDisplayTitle,
+      storyId: data.storyId,
+      storyIndex: data.storyIndex,
+      storyPageCount: data.storyPageCount,
+      storyPlaybackMode: data.storyPlaybackMode,
+      storyReadStatus: data.storyReadStatus,
+      storyTitle: data.storyTitle,
+    },
+    clip: {
+      categories: data.categories,
+      categoryDetails: data.categoryDetails,
+      clipActionText: data.clipActionText,
+      clipActionUrl: data.clipActionUrl,
+      clipHasAction: data.clipHasAction,
+      clipId: data.clipId,
+      clipIndex: data.clipIndex,
+      clipTitle: data.clipTitle,
+      clipsViewed: data.clipsViewed,
+      collection: data.collection,
+      contentLength: data.contentLength,
+      dismissedReason: data.dismissedReason,
+      durationViewed: data.durationViewed,
+      loopsViewed: data.loopsViewed,
+      openedReason: data.openedReason,
+    },
+  };
+
+  // Get the category of the event type
+  const eventCategory = determineCategory(type, data);
+
+  // If the event type is in scope, proceed
   if (eventCategory) {
     // Initialize window.dataLayer if it's not already defined
     window.dataLayer = window.dataLayer || [];
 
-    // Prepare the common event data structure
-    const payload = {
-      event: 'storytellerEvent',
-      eventData: {
-        eventType: eventCategory,
-        eventName: type
-      }
-    };
-
-    // Add the story specific metadata if the event is a storyteller story event
-    if (eventCategory === 'story') {
-      payload.storyteller = {
-        categories: data.categories,
-        categoryDetails: data.categoryDetails,
-        currentCategory: data.currentCategory,
-        openedReason: data.openedReason,
-        dismissedReason: data.dismissedReason,
-        pageId: data.pageId,
-        pageIndex: data.pageIndex,
-        pageType: data.pageType,
-        storyId: data.storyId,
-        storyIndex: data.storyIndex,
-        storyPageCount: data.storyPageCount,
-        storyPlaybackMode: data.storyPlaybackMode,
-        storyReadStatus: data.storyReadStatus,
-        storyTitle: data.storyTitle,
-        storyDisplayTitle: data.storyDisplayTitle,
-        contentLength: data.contentLength,
-        pageActionText: data.pageActionText,
-        pageActionUrl: data.pageActionUrl,
-        pageHasAction: data.pageHasAction
-      };
-    }
-
-    // Add additional logic for other categories (poll, ad, quiz) here in the future
-    // Example:
-    // if (eventCategory === 'poll') {
-    //   payload.poll = {
-    //     pollId: data.pollId,
-    //     pollQuestion: data.pollQuestion,
-    //     pollOptions: data.pollOptions,
-    //     selectedOption: data.selectedOption
-    //   };
-    // }
+    // Prepare the payload based on the event category and data
+    const payload = preparePayload(
+      eventCategory,
+      type,
+      storytellerMetadata[eventCategory],
+    );
 
     // Push the event data to the dataLayer
     window.dataLayer.push(payload);
+    //console.log('Storyteller Activity:', type, data);
   }
 }
-
-
